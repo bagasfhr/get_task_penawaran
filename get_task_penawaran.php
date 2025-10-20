@@ -2,21 +2,24 @@
 ###############################################################################################################
 # Date          |    Type    |   Version                                                                      # 
 ############################################################################################################### 
-# 22-09-2025    |   Create   |  1.3.2209.2025                                                                   #
+# 22-09-2025    |   Create   |  1.3.2209.2025                                                                 #
 # 20-10-2025    |   Modify   |  1.4.2010.2025                                                                 #
 ############################################################################################################### 
-
-ini_set('post_max_size', '264M');
-ini_set('upload_max_filesize', '264M');
-// ini_set('memory_limit', '296M');
-ini_set('memory_limit', '-1');
-ini_set('max_execution_time', 3000);
 
 $server = $mssql_server;
 $username = $mssql_user;  
 $password = $mssql_pass;
-$con = mssql_connect($server, $username, $password);
-mssql_select_db( "WISE_STAGING", $con );
+
+$dsn = "sqlsrv:Server=$server;Database=WISE_STAGING";
+
+try {
+    $pdo = new PDO($dsn, $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    error_log("Koneksi database gagal (FILE: " . __FILE__ . " LINE: " . __LINE__ . "): " . $e->getMessage());
+    http_response_code(500);
+    exit("Terjadi kesalahan sistem. Mohon coba lagi nanti.");
+}
 
 
 /* config mysql */ 
@@ -25,24 +28,31 @@ $conf_user          = $mysql_user;
 $conf_passwd        = $mysql_pass;
 $conf_db            = $mysql_db;
 
-
 function connectDB() {
-    global $conf_ip, $conf_user, $conf_passwd, $conf_db ;   
-    if (!$connect=mysqli_connect($conf_ip, $conf_user, $conf_passwd, $conf_db)) {
-      $filename = __FILE__;
-      $linename = __LINE__;
+    global $conf_ip, $conf_user, $conf_passwd, $conf_db, $pdo; // Tambahkan $pdo ke global
+
+    $dsn = 'mysql:host=' . $conf_ip . ';dbname=' . $conf_db . ';charset=utf8mb4';
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    try {
+        $pdo = new PDO($dsn, $conf_user, $conf_passwd, $options);
+        return true;
+    } catch (\PDOException $e) {
+        error_log("Koneksi database gagal: " . $e->getMessage());
+        return false;
     }
-    return $connect;
 }
+
 
 
 function disconnectDB($db_connect) {
-    mysqli_close($db_connect);
+    $db_connect->close(); 
+    unset($db_connect); 
 }
-
-echo "Process...";
-echo "<br>";
-echo "<br>";
 
 $dateexe = DATE("Y-m-d H:i:s");
 $dbopen  = connectDB();
@@ -54,7 +64,9 @@ $dbopen  = connectDB();
     $err1=0;
 
 $sqlflag = "UPDATE cc_ts_penawaran_job SET is_eligible_crm=0 WHERE SOURCE_DATA = 'WISE'";
-$resflag = mysqli_query($dbopen,$sqlflag);
+$stmt = $dbopen->prepare($sqlflag);
+$resflag = $stmt->execute();
+$stmt->close();
 
 $mss_1 = "select A.*
           FROM WISE_STAGING..V_MKT_POLO_ELIGIBLE A WITH(NOLOCK)
@@ -64,197 +76,199 @@ $mss_1 = "select A.*
           AND ISNULL(Y.POLO_STEP, B.POLO_STEP) IN ('TASK MVS','TASK MSS', 'TASK MSS 2', 'TASK MSS AC', 'TASK WISE')
           WHERE A.IS_ACTIVE = '1' AND B.AGRMNT_NO IS NULL";
 
-    $rss_1 = mssql_query($mss_1);
-    while($rcs_1 = mssql_fetch_array($rss_1)){
+try {
+    $stmt = $pdo->query($sql);
+    
+    while (($rcs_1 = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
 
         $AGRMNT_ID = $rcs_1['AGRMNT_ID']; 
-        $AGRMNT_NO = mysqli_real_escape_string($dbopen,$rcs_1['AGRMNT_NO']); 
-        $AGRMNT_DT = mysqli_real_escape_string($dbopen,$rcs_1['AGRMNT_DT']); 
-        $PIPELINE_ID = mysqli_real_escape_string($dbopen,$rcs_1['PIPELINE_ID']); 
-        $JOB_ID = mysqli_real_escape_string($dbopen,$rcs_1['JOB_ID']); 
-        $IS_ACTIVE = mysqli_real_escape_string($dbopen,$rcs_1['IS_ACTIVE']); 
-        $DISTRIBUTED_DT = mysqli_real_escape_string($dbopen,$rcs_1['DISTRIBUTED_DT']); 
-        $DISTRIBUTED_USR = mysqli_real_escape_string($dbopen,$rcs_1['DISTRIBUTED_USR']); 
-        $IS_COMPLETE = mysqli_real_escape_string($dbopen,$rcs_1['IS_COMPLETE']); 
-        $COMPLETED_DT = mysqli_real_escape_string($dbopen,$rcs_1['COMPLETED_DT']); 
-        $CAE_FINAL_SCORE = mysqli_real_escape_string($dbopen,$rcs_1['CAE_FINAL_SCORE']); 
-        $CAE_FINAL_RESULT = mysqli_real_escape_string($dbopen,$rcs_1['CAE_FINAL_RESULT']); 
-        $CAE_RESULT = mysqli_real_escape_string($dbopen,$rcs_1['CAE_RESULT']); 
-        $CAE_DT = mysqli_real_escape_string($dbopen,$rcs_1['CAE_DT']); 
-        $DUKCAPIL = mysqli_real_escape_string($dbopen,$rcs_1['DUKCAPIL']); 
-        $DUKCAPIL_RESULT = mysqli_real_escape_string($dbopen,$rcs_1['DUKCAPIL_RESULT']); 
-        $DUKCAPIL_API_DT = mysqli_real_escape_string($dbopen,$rcs_1['DUKCAPIL_API_DT']); 
-        $SCHEME_ID = mysqli_real_escape_string($dbopen,$rcs_1['SCHEME_ID']); 
-        $SLIK_CBASID = mysqli_real_escape_string($dbopen,$rcs_1['SLIK_CBASID']); 
-        $SLIK_RESULT = mysqli_real_escape_string($dbopen,$rcs_1['SLIK_RESULT']); 
-        $SLIK_CATEGORY = mysqli_real_escape_string($dbopen,$rcs_1['SLIK_CATEGORY']); 
-        $SLIK_API_DT = mysqli_real_escape_string($dbopen,$rcs_1['SLIK_API_DT']); 
-        $SOURCE_DATA = mysqli_real_escape_string($dbopen,$rcs_1['SOURCE_DATA']); 
-        $KILAT_PINTAR = mysqli_real_escape_string($dbopen,$rcs_1['KILAT_PINTAR']); 
-        $BUSINESS_DATE = mysqli_real_escape_string($dbopen,$rcs_1['BUSINESS_DATE']); 
-        $OFFICE_REGION_CODE = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_REGION_CODE']); 
-        $OFFICE_REGION_NAME = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_REGION_NAME']); 
-        $OFFICE_CODE = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_CODE']); 
-        $OFFICE_NAME = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_NAME']); 
-        $CAB_COLL = mysqli_real_escape_string($dbopen,$rcs_1['CAB_COLL']); 
-        $CAB_COLL_NAME = mysqli_real_escape_string($dbopen,$rcs_1['CAB_COLL_NAME']); 
-        $KAPOS_NAME = mysqli_real_escape_string($dbopen,$rcs_1['KAPOS_NAME']); 
-        $PROD_OFFERING_CODE = mysqli_real_escape_string($dbopen,$rcs_1['PROD_OFFERING_CODE']); 
-        $LOB_CODE = mysqli_real_escape_string($dbopen,$rcs_1['LOB_CODE']); 
-        $CUST_TYPE = mysqli_real_escape_string($dbopen,$rcs_1['CUST_TYPE']); 
-        $CUST_NO = mysqli_real_escape_string($dbopen,$rcs_1['CUST_NO']); 
-        $CUST_NAME = mysqli_real_escape_string($dbopen,$rcs_1['CUST_NAME']); 
-        $ID_NO = mysqli_real_escape_string($dbopen,$rcs_1['ID_NO']); 
-        $GENDER = mysqli_real_escape_string($dbopen,$rcs_1['GENDER']); 
-        $RELIGION = mysqli_real_escape_string($dbopen,$rcs_1['RELIGION']); 
-        $BIRTH_PLACE = mysqli_real_escape_string($dbopen,$rcs_1['BIRTH_PLACE']); 
-        $BIRTH_DT = mysqli_real_escape_string($dbopen,$rcs_1['BIRTH_DT']); 
+        $AGRMNT_NO = $rcs_1['AGRMNT_NO']; 
+        $AGRMNT_DT = $rcs_1['AGRMNT_DT']; 
+        $PIPELINE_ID = $rcs_1['PIPELINE_ID']; 
+        $JOB_ID = $rcs_1['JOB_ID']; 
+        $IS_ACTIVE = $rcs_1['IS_ACTIVE']; 
+        $DISTRIBUTED_DT = $rcs_1['DISTRIBUTED_DT']; 
+        $DISTRIBUTED_USR = $rcs_1['DISTRIBUTED_USR']; 
+        $IS_COMPLETE = $rcs_1['IS_COMPLETE']; 
+        $COMPLETED_DT = $rcs_1['COMPLETED_DT']; 
+        $CAE_FINAL_SCORE = $rcs_1['CAE_FINAL_SCORE']; 
+        $CAE_FINAL_RESULT = $rcs_1['CAE_FINAL_RESULT']; 
+        $CAE_RESULT = $rcs_1['CAE_RESULT']; 
+        $CAE_DT = $rcs_1['CAE_DT']; 
+        $DUKCAPIL = $rcs_1['DUKCAPIL']; 
+        $DUKCAPIL_RESULT = $rcs_1['DUKCAPIL_RESULT']; 
+        $DUKCAPIL_API_DT = $rcs_1['DUKCAPIL_API_DT']; 
+        $SCHEME_ID = $rcs_1['SCHEME_ID']; 
+        $SLIK_CBASID = $rcs_1['SLIK_CBASID']; 
+        $SLIK_RESULT = $rcs_1['SLIK_RESULT']; 
+        $SLIK_CATEGORY = $rcs_1['SLIK_CATEGORY']; 
+        $SLIK_API_DT = $rcs_1['SLIK_API_DT']; 
+        $SOURCE_DATA = $rcs_1['SOURCE_DATA']; 
+        $KILAT_PINTAR = $rcs_1['KILAT_PINTAR']; 
+        $BUSINESS_DATE = $rcs_1['BUSINESS_DATE']; 
+        $OFFICE_REGION_CODE = $rcs_1['OFFICE_REGION_CODE']; 
+        $OFFICE_REGION_NAME = $rcs_1['OFFICE_REGION_NAME']; 
+        $OFFICE_CODE = $rcs_1['OFFICE_CODE']; 
+        $OFFICE_NAME = $rcs_1['OFFICE_NAME']; 
+        $CAB_COLL = $rcs_1['CAB_COLL']; 
+        $CAB_COLL_NAME = $rcs_1['CAB_COLL_NAME']; 
+        $KAPOS_NAME = $rcs_1['KAPOS_NAME']; 
+        $PROD_OFFERING_CODE = $rcs_1['PROD_OFFERING_CODE']; 
+        $LOB_CODE = $rcs_1['LOB_CODE']; 
+        $CUST_TYPE = $rcs_1['CUST_TYPE']; 
+        $CUST_NO = $rcs_1['CUST_NO']; 
+        $CUST_NAME = $rcs_1['CUST_NAME']; 
+        $ID_NO = $rcs_1['ID_NO']; 
+        $GENDER = $rcs_1['GENDER']; 
+        $RELIGION = $rcs_1['RELIGION']; 
+        $BIRTH_PLACE = $rcs_1['BIRTH_PLACE']; 
+        $BIRTH_DT = $rcs_1['BIRTH_DT']; 
         $BIRTH_DT = date("Y-m-d h:i:s", strtotime($BIRTH_DT));
-        $SPOUSE_ID_NO = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_ID_NO']); 
-        $SPOUSE_NAME = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_NAME']); 
-        $SPOUSE_BIRTH_DT = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_BIRTH_DT']); 
-        $ADDR_LEG = mysqli_real_escape_string($dbopen,$rcs_1['ADDR_LEG']); 
-        $RT_LEG = mysqli_real_escape_string($dbopen,$rcs_1['RT_LEG']); 
-        $RW_LEG = mysqli_real_escape_string($dbopen,$rcs_1['RW_LEG']); 
-        $PROVINSI_LEG = mysqli_real_escape_string($dbopen,$rcs_1['PROVINSI_LEG']); 
-        $CITY_LEG = mysqli_real_escape_string($dbopen,$rcs_1['CITY_LEG']); 
-        $KABUPATEN_LEG = mysqli_real_escape_string($dbopen,$rcs_1['KABUPATEN_LEG']); 
-        $KECAMATAN_LEG = mysqli_real_escape_string($dbopen,$rcs_1['KECAMATAN_LEG']); 
-        $KELURAHAN_LEG = mysqli_real_escape_string($dbopen,$rcs_1['KELURAHAN_LEG']); 
-        $ZIPCODE_LEG = mysqli_real_escape_string($dbopen,$rcs_1['ZIPCODE_LEG']); 
-        $SUB_ZIPCODE_LEG = mysqli_real_escape_string($dbopen,$rcs_1['SUB_ZIPCODE_LEG']); 
-        $ADDR_RES = mysqli_real_escape_string($dbopen,$rcs_1['ADDR_RES']); 
-        $RT_RES = mysqli_real_escape_string($dbopen,$rcs_1['RT_RES']); 
-        $RW_RES = mysqli_real_escape_string($dbopen,$rcs_1['RW_RES']); 
-        $PROVINSI_RES = mysqli_real_escape_string($dbopen,$rcs_1['PROVINSI_RES']); 
-        $CITY_RES = mysqli_real_escape_string($dbopen,$rcs_1['CITY_RES']); 
-        $KABUPATEN_RES = mysqli_real_escape_string($dbopen,$rcs_1['KABUPATEN_RES']); 
-        $KECAMATAN_RES = mysqli_real_escape_string($dbopen,$rcs_1['KECAMATAN_RES']); 
-        $KELURAHAN_RES = mysqli_real_escape_string($dbopen,$rcs_1['KELURAHAN_RES']); 
-        $ZIPCODE_RES = mysqli_real_escape_string($dbopen,$rcs_1['ZIPCODE_RES']); 
-        $SUB_ZIPCODE_RES = mysqli_real_escape_string($dbopen,$rcs_1['SUB_ZIPCODE_RES']); 
-        $MOBILE1 = mysqli_real_escape_string($dbopen,$rcs_1['MOBILE1']); 
-        $MOBILE2 = mysqli_real_escape_string($dbopen,$rcs_1['MOBILE2']); 
-        $PHONE1 = mysqli_real_escape_string($dbopen,$rcs_1['PHONE1']); 
-        $PHONE2 = mysqli_real_escape_string($dbopen,$rcs_1['PHONE2']); 
-        $OFFICE_PHONE1 = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_PHONE1']); 
-        $OFFICE_PHONE2 = mysqli_real_escape_string($dbopen,$rcs_1['OFFICE_PHONE2']); 
-        $PROFESSION_CODE = mysqli_real_escape_string($dbopen,$rcs_1['PROFESSION_CODE']); 
-        $PROFESSION_NAME = mysqli_real_escape_string($dbopen,$rcs_1['PROFESSION_NAME']); 
-        $PROFESSION_CATEGORY_CODE = mysqli_real_escape_string($dbopen,$rcs_1['PROFESSION_CATEGORY_CODE']); 
-        $PROFESSION_CATEGORY_NAME = mysqli_real_escape_string($dbopen,$rcs_1['PROFESSION_CATEGORY_NAME']); 
-        $JOB_POSITION = mysqli_real_escape_string($dbopen,$rcs_1['JOB_POSITION']); 
-        $JOB_STATUS = mysqli_real_escape_string($dbopen,$rcs_1['JOB_STATUS']); 
-        $INDUSTRY_TYPE_NAME = mysqli_real_escape_string($dbopen,$rcs_1['INDUSTRY_TYPE_NAME']); 
-        $OTHER_BIZ_NAME = mysqli_real_escape_string($dbopen,$rcs_1['OTHER_BIZ_NAME']); 
-        $MONTHLY_INCOME = mysqli_real_escape_string($dbopen,$rcs_1['MONTHLY_INCOME']); 
-        $MONTHLY_EXPENSE = mysqli_real_escape_string($dbopen,$rcs_1['MONTHLY_EXPENSE']); 
-        $MONTHLY_INSTALLMENT = mysqli_real_escape_string($dbopen,$rcs_1['MONTHLY_INSTALLMENT']); 
-        $DOWNPAYMENT = mysqli_real_escape_string($dbopen,$rcs_1['DOWNPAYMENT']); 
-        $PERCENT_DP = mysqli_real_escape_string($dbopen,$rcs_1['PERCENT_DP']); 
-        $PLAFOND = mysqli_real_escape_string($dbopen,$rcs_1['PLAFOND']); 
-        $CUST_RATING = mysqli_real_escape_string($dbopen,$rcs_1['CUST_RATING']); 
-        $SUPPL_NAME = mysqli_real_escape_string($dbopen,$rcs_1['SUPPL_NAME']); 
-        $SUPPL_CODE = mysqli_real_escape_string($dbopen,$rcs_1['SUPPL_CODE']); 
-        $MACHINE_NO = mysqli_real_escape_string($dbopen,$rcs_1['MACHINE_NO']); 
-        $CHASSIS_NO = mysqli_real_escape_string($dbopen,$rcs_1['CHASSIS_NO']); 
-        $PRODUCT_CATEGORY = mysqli_real_escape_string($dbopen,$rcs_1['PRODUCT_CATEGORY']); 
-        $ASSET_CATEGORY_CODE = mysqli_real_escape_string($dbopen,$rcs_1['ASSET_CATEGORY_CODE']); 
-        $ASSET_TYPE = mysqli_real_escape_string($dbopen,$rcs_1['ASSET_TYPE']); 
-        $ITEM_BRAND = mysqli_real_escape_string($dbopen,$rcs_1['ITEM_BRAND']); 
-        $ITEM_TYPE = mysqli_real_escape_string($dbopen,$rcs_1['ITEM_TYPE']); 
-        $ITEM_DESCRIPTION = mysqli_real_escape_string($dbopen,$rcs_1['ITEM_DESCRIPTION']); 
-        $ASSET_MODEL = mysqli_real_escape_string($dbopen,$rcs_1['ASSET_MODEL']); 
-        $OTR_PRICE = mysqli_real_escape_string($dbopen,$rcs_1['OTR_PRICE']); 
-        $ITEM_YEAR = mysqli_real_escape_string($dbopen,$rcs_1['ITEM_YEAR']); 
-        $OWNER_RELATIONSHIP = mysqli_real_escape_string($dbopen,$rcs_1['OWNER_RELATIONSHIP']); 
-        $BPKB_OWNERSHIP = mysqli_real_escape_string($dbopen,$rcs_1['BPKB_OWNERSHIP']); 
-        $AGRMNT_RATING = mysqli_real_escape_string($dbopen,$rcs_1['AGRMNT_RATING']); 
-        $CONTRACT_STAT = mysqli_real_escape_string($dbopen,$rcs_1['CONTRACT_STAT']); 
-        $INST_PAYED = mysqli_real_escape_string($dbopen,$rcs_1['INST_PAYED']); 
-        $NEXT_INST_NUM = mysqli_real_escape_string($dbopen,$rcs_1['NEXT_INST_NUM']); 
-        $NEXT_INST_DT = mysqli_real_escape_string($dbopen,$rcs_1['NEXT_INST_DT']); 
-        $OS_TENOR = mysqli_real_escape_string($dbopen,$rcs_1['OS_TENOR']); 
-        $TENOR = mysqli_real_escape_string($dbopen,$rcs_1['TENOR']); 
-        $RELEASE_DATE_BPKB = mysqli_real_escape_string($dbopen,$rcs_1['RELEASE_DATE_BPKB']); 
-        $MATURITY_DT = mysqli_real_escape_string($dbopen,$rcs_1['MATURITY_DT']); 
-        $MATURITY_DURATION = mysqli_real_escape_string($dbopen,$rcs_1['MATURITY_DURATION']); 
-        $GO_LIVE_DT = mysqli_real_escape_string($dbopen,$rcs_1['GO_LIVE_DT']); 
-        $GO_LIVE_DURATION = mysqli_real_escape_string($dbopen,$rcs_1['GO_LIVE_DURATION']); 
-        $AAM_RRD_DT = mysqli_real_escape_string($dbopen,$rcs_1['AAM_RRD_DT']); 
-        $EXPIRED_MONTHS = mysqli_real_escape_string($dbopen,$rcs_1['EXPIRED_MONTHS']); 
-        $OS_PRINCIPAL = mysqli_real_escape_string($dbopen,$rcs_1['OS_PRINCIPAL']); 
-        $OS_PRINCIPAL_AMT = mysqli_real_escape_string($dbopen,$rcs_1['OS_PRINCIPAL_AMT']); 
-        $OS_INTEREST_AMT = mysqli_real_escape_string($dbopen,$rcs_1['OS_INTEREST_AMT']); 
-        $AGING_PEMBIAYAAN = mysqli_real_escape_string($dbopen,$rcs_1['AGING_PEMBIAYAAN']); 
-        $JUMLAH_KONTRAK_PERCUST = mysqli_real_escape_string($dbopen,$rcs_1['JUMLAH_KONTRAK_PERCUST']); 
-        $ESTIMASI_TERIMA_BERSIH = mysqli_real_escape_string($dbopen,$rcs_1['ESTIMASI_TERIMA_BERSIH']); 
-        $STARTED_DT = mysqli_real_escape_string($dbopen,$rcs_1['STARTED_DT']); 
-        $POS_DEALER = mysqli_real_escape_string($dbopen,$rcs_1['POS_DEALER']); 
-        $SALES_DEALER_ID = mysqli_real_escape_string($dbopen,$rcs_1['SALES_DEALER_ID']); 
-        $SALES_DEALER = mysqli_real_escape_string($dbopen,$rcs_1['SALES_DEALER']); 
-        $DTM_CRT = mysqli_real_escape_string($dbopen,$rcs_1['DTM_CRT']); 
-        $USR_CRT = mysqli_real_escape_string($dbopen,$rcs_1['USR_CRT']); 
-        $DTM_UPD = mysqli_real_escape_string($dbopen,$rcs_1['DTM_UPD']); 
-        $USR_UPD = mysqli_real_escape_string($dbopen,$rcs_1['USR_UPD']); 
-        $COLL_AGRMNT_ID = mysqli_real_escape_string($dbopen,$rcs_1['COLL_AGRMNT_ID']); 
-        $AGRMNT_ASSET_ID = mysqli_real_escape_string($dbopen,$rcs_1['AGRMNT_ASSET_ID']); 
-        $ASSET_MASTER_ID = mysqli_real_escape_string($dbopen,$rcs_1['ASSET_MASTER_ID']); 
-        $DEFAULT_STAT = mysqli_real_escape_string($dbopen,$rcs_1['DEFAULT_STAT']); 
-        $CUST_ID = mysqli_real_escape_string($dbopen,$rcs_1['CUST_ID']); 
-        $HOME_STAT = mysqli_real_escape_string($dbopen,$rcs_1['HOME_STAT']); 
-        $MOTHER_NAME = mysqli_real_escape_string($dbopen,$rcs_1['MOTHER_NAME']); 
-        $IS_EVER_REPO = mysqli_real_escape_string($dbopen,$rcs_1['IS_EVER_REPO']); 
-        $IS_REPO = mysqli_real_escape_string($dbopen,$rcs_1['IS_REPO']); 
-        $IS_WRITE_OFF = mysqli_real_escape_string($dbopen,$rcs_1['IS_WRITE_OFF']); 
-        $IS_RESTRUKTUR = mysqli_real_escape_string($dbopen,$rcs_1['IS_RESTRUKTUR']); 
-        $IS_INSURANCE = mysqli_real_escape_string($dbopen,$rcs_1['IS_INSURANCE']); 
-        $IS_NEGATIVE_CUST = mysqli_real_escape_string($dbopen,$rcs_1['IS_NEGATIVE_CUST']); 
-        $IS_ACCOUNT_BAM = mysqli_real_escape_string($dbopen,$rcs_1['IS_ACCOUNT_BAM']); 
-        $CUST_EXPOSURE = mysqli_real_escape_string($dbopen,$rcs_1['CUST_EXPOSURE']); 
-        $AGE = mysqli_real_escape_string($dbopen,$rcs_1['AGE']); 
-        $ASSET_AGE = mysqli_real_escape_string($dbopen,$rcs_1['ASSET_AGE']); 
-        $SAME_ASSET_GO_LIVE = mysqli_real_escape_string($dbopen,$rcs_1['SAME_ASSET_GO_LIVE']); 
-        $LTV = mysqli_real_escape_string($dbopen,$rcs_1['LTV']); 
-        $DSR = mysqli_real_escape_string($dbopen,$rcs_1['DSR']); 
-        $MARITAL_STAT = mysqli_real_escape_string($dbopen,$rcs_1['MARITAL_STAT']); 
-        $EDUCATION = mysqli_real_escape_string($dbopen,$rcs_1['EDUCATION']); 
-        $EMPLOYMENT_ESTABLISHMENT_DT = mysqli_real_escape_string($dbopen,$rcs_1['EMPLOYMENT_ESTABLISHMENT_DT']); 
-        $LENGTH_OF_WORK = mysqli_real_escape_string($dbopen,$rcs_1['LENGTH_OF_WORK']); 
-        $HOUSE_STAY_LENGTH = mysqli_real_escape_string($dbopen,$rcs_1['HOUSE_STAY_LENGTH']); 
-        $LAST_OVERDUE = mysqli_real_escape_string($dbopen,$rcs_1['LAST_OVERDUE']); 
-        $MAX_OVERDUE = mysqli_real_escape_string($dbopen,$rcs_1['MAX_OVERDUE']); 
-        $MAX_OVERDUE_LAST_X_MONTHS = mysqli_real_escape_string($dbopen,$rcs_1['MAX_OVERDUE_LAST_X_MONTHS']); 
-        $IS_USED = mysqli_real_escape_string($dbopen,$rcs_1['IS_USED']);
-        $SPOUSE_BIRTH_PLACE = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_BIRTH_PLACE']);
+        $SPOUSE_ID_NO = $rcs_1['SPOUSE_ID_NO']; 
+        $SPOUSE_NAME = $rcs_1['SPOUSE_NAME']; 
+        $SPOUSE_BIRTH_DT = $rcs_1['SPOUSE_BIRTH_DT']; 
+        $ADDR_LEG = $rcs_1['ADDR_LEG']; 
+        $RT_LEG = $rcs_1['RT_LEG']; 
+        $RW_LEG = $rcs_1['RW_LEG']; 
+        $PROVINSI_LEG = $rcs_1['PROVINSI_LEG']; 
+        $CITY_LEG = $rcs_1['CITY_LEG']; 
+        $KABUPATEN_LEG = $rcs_1['KABUPATEN_LEG']; 
+        $KECAMATAN_LEG = $rcs_1['KECAMATAN_LEG']; 
+        $KELURAHAN_LEG = $rcs_1['KELURAHAN_LEG']; 
+        $ZIPCODE_LEG = $rcs_1['ZIPCODE_LEG']; 
+        $SUB_ZIPCODE_LEG = $rcs_1['SUB_ZIPCODE_LEG']; 
+        $ADDR_RES = $rcs_1['ADDR_RES']; 
+        $RT_RES = $rcs_1['RT_RES']; 
+        $RW_RES = $rcs_1['RW_RES']; 
+        $PROVINSI_RES = $rcs_1['PROVINSI_RES']; 
+        $CITY_RES = $rcs_1['CITY_RES']; 
+        $KABUPATEN_RES = $rcs_1['KABUPATEN_RES']; 
+        $KECAMATAN_RES = $rcs_1['KECAMATAN_RES']; 
+        $KELURAHAN_RES = $rcs_1['KELURAHAN_RES']; 
+        $ZIPCODE_RES = $rcs_1['ZIPCODE_RES']; 
+        $SUB_ZIPCODE_RES = $rcs_1['SUB_ZIPCODE_RES']; 
+        $MOBILE1 = $rcs_1['MOBILE1']; 
+        $MOBILE2 = $rcs_1['MOBILE2']; 
+        $PHONE1 = $rcs_1['PHONE1']; 
+        $PHONE2 = $rcs_1['PHONE2']; 
+        $OFFICE_PHONE1 = $rcs_1['OFFICE_PHONE1']; 
+        $OFFICE_PHONE2 = $rcs_1['OFFICE_PHONE2']; 
+        $PROFESSION_CODE = $rcs_1['PROFESSION_CODE']; 
+        $PROFESSION_NAME = $rcs_1['PROFESSION_NAME']; 
+        $PROFESSION_CATEGORY_CODE = $rcs_1['PROFESSION_CATEGORY_CODE']; 
+        $PROFESSION_CATEGORY_NAME = $rcs_1['PROFESSION_CATEGORY_NAME']; 
+        $JOB_POSITION = $rcs_1['JOB_POSITION']; 
+        $JOB_STATUS = $rcs_1['JOB_STATUS']; 
+        $INDUSTRY_TYPE_NAME = $rcs_1['INDUSTRY_TYPE_NAME']; 
+        $OTHER_BIZ_NAME = $rcs_1['OTHER_BIZ_NAME']; 
+        $MONTHLY_INCOME = $rcs_1['MONTHLY_INCOME']; 
+        $MONTHLY_EXPENSE = $rcs_1['MONTHLY_EXPENSE']; 
+        $MONTHLY_INSTALLMENT = $rcs_1['MONTHLY_INSTALLMENT']; 
+        $DOWNPAYMENT = $rcs_1['DOWNPAYMENT']; 
+        $PERCENT_DP = $rcs_1['PERCENT_DP']; 
+        $PLAFOND = $rcs_1['PLAFOND']; 
+        $CUST_RATING = $rcs_1['CUST_RATING']; 
+        $SUPPL_NAME = $rcs_1['SUPPL_NAME']; 
+        $SUPPL_CODE = $rcs_1['SUPPL_CODE']; 
+        $MACHINE_NO = $rcs_1['MACHINE_NO']; 
+        $CHASSIS_NO = $rcs_1['CHASSIS_NO']; 
+        $PRODUCT_CATEGORY = $rcs_1['PRODUCT_CATEGORY']; 
+        $ASSET_CATEGORY_CODE = $rcs_1['ASSET_CATEGORY_CODE']; 
+        $ASSET_TYPE = $rcs_1['ASSET_TYPE']; 
+        $ITEM_BRAND = $rcs_1['ITEM_BRAND']; 
+        $ITEM_TYPE = $rcs_1['ITEM_TYPE']; 
+        $ITEM_DESCRIPTION = $rcs_1['ITEM_DESCRIPTION']; 
+        $ASSET_MODEL = $rcs_1['ASSET_MODEL']; 
+        $OTR_PRICE = $rcs_1['OTR_PRICE']; 
+        $ITEM_YEAR = $rcs_1['ITEM_YEAR']; 
+        $OWNER_RELATIONSHIP = $rcs_1['OWNER_RELATIONSHIP']; 
+        $BPKB_OWNERSHIP = $rcs_1['BPKB_OWNERSHIP']; 
+        $AGRMNT_RATING = $rcs_1['AGRMNT_RATING']; 
+        $CONTRACT_STAT = $rcs_1['CONTRACT_STAT']; 
+        $INST_PAYED = $rcs_1['INST_PAYED']; 
+        $NEXT_INST_NUM = $rcs_1['NEXT_INST_NUM']; 
+        $NEXT_INST_DT = $rcs_1['NEXT_INST_DT']; 
+        $OS_TENOR = $rcs_1['OS_TENOR']; 
+        $TENOR = $rcs_1['TENOR']; 
+        $RELEASE_DATE_BPKB = $rcs_1['RELEASE_DATE_BPKB']; 
+        $MATURITY_DT = $rcs_1['MATURITY_DT']; 
+        $MATURITY_DURATION = $rcs_1['MATURITY_DURATION']; 
+        $GO_LIVE_DT = $rcs_1['GO_LIVE_DT']; 
+        $GO_LIVE_DURATION = $rcs_1['GO_LIVE_DURATION']; 
+        $AAM_RRD_DT = $rcs_1['AAM_RRD_DT']; 
+        $EXPIRED_MONTHS = $rcs_1['EXPIRED_MONTHS']; 
+        $OS_PRINCIPAL = $rcs_1['OS_PRINCIPAL']; 
+        $OS_PRINCIPAL_AMT = $rcs_1['OS_PRINCIPAL_AMT']; 
+        $OS_INTEREST_AMT = $rcs_1['OS_INTEREST_AMT']; 
+        $AGING_PEMBIAYAAN = $rcs_1['AGING_PEMBIAYAAN']; 
+        $JUMLAH_KONTRAK_PERCUST = $rcs_1['JUMLAH_KONTRAK_PERCUST']; 
+        $ESTIMASI_TERIMA_BERSIH = $rcs_1['ESTIMASI_TERIMA_BERSIH']; 
+        $STARTED_DT = $rcs_1['STARTED_DT']; 
+        $POS_DEALER = $rcs_1['POS_DEALER']; 
+        $SALES_DEALER_ID = $rcs_1['SALES_DEALER_ID']; 
+        $SALES_DEALER = $rcs_1['SALES_DEALER']; 
+        $DTM_CRT = $rcs_1['DTM_CRT']; 
+        $USR_CRT = $rcs_1['USR_CRT']; 
+        $DTM_UPD = $rcs_1['DTM_UPD']; 
+        $USR_UPD = $rcs_1['USR_UPD']; 
+        $COLL_AGRMNT_ID = $rcs_1['COLL_AGRMNT_ID']; 
+        $AGRMNT_ASSET_ID = $rcs_1['AGRMNT_ASSET_ID']; 
+        $ASSET_MASTER_ID = $rcs_1['ASSET_MASTER_ID']; 
+        $DEFAULT_STAT = $rcs_1['DEFAULT_STAT']; 
+        $CUST_ID = $rcs_1['CUST_ID']; 
+        $HOME_STAT = $rcs_1['HOME_STAT']; 
+        $MOTHER_NAME = $rcs_1['MOTHER_NAME']; 
+        $IS_EVER_REPO = $rcs_1['IS_EVER_REPO']; 
+        $IS_REPO = $rcs_1['IS_REPO']; 
+        $IS_WRITE_OFF = $rcs_1['IS_WRITE_OFF']; 
+        $IS_RESTRUKTUR = $rcs_1['IS_RESTRUKTUR']; 
+        $IS_INSURANCE = $rcs_1['IS_INSURANCE']; 
+        $IS_NEGATIVE_CUST = $rcs_1['IS_NEGATIVE_CUST']; 
+        $IS_ACCOUNT_BAM = $rcs_1['IS_ACCOUNT_BAM']; 
+        $CUST_EXPOSURE = $rcs_1['CUST_EXPOSURE']; 
+        $AGE = $rcs_1['AGE']; 
+        $ASSET_AGE = $rcs_1['ASSET_AGE']; 
+        $SAME_ASSET_GO_LIVE = $rcs_1['SAME_ASSET_GO_LIVE']; 
+        $LTV = $rcs_1['LTV']; 
+        $DSR = $rcs_1['DSR']; 
+        $MARITAL_STAT = $rcs_1['MARITAL_STAT']; 
+        $EDUCATION = $rcs_1['EDUCATION']; 
+        $EMPLOYMENT_ESTABLISHMENT_DT = $rcs_1['EMPLOYMENT_ESTABLISHMENT_DT']; 
+        $LENGTH_OF_WORK = $rcs_1['LENGTH_OF_WORK']; 
+        $HOUSE_STAY_LENGTH = $rcs_1['HOUSE_STAY_LENGTH']; 
+        $LAST_OVERDUE = $rcs_1['LAST_OVERDUE']; 
+        $MAX_OVERDUE = $rcs_1['MAX_OVERDUE']; 
+        $MAX_OVERDUE_LAST_X_MONTHS = $rcs_1['MAX_OVERDUE_LAST_X_MONTHS']; 
+        $IS_USED = $rcs_1['IS_USED'];
+        $SPOUSE_BIRTH_PLACE = $rcs_1['SPOUSE_BIRTH_PLACE'];
 
-        $IS_SELECTED = mysqli_real_escape_string($dbopen,$rcs_1['IS_SELECTED']);
-        $PIPELINE_DUMMY_ID = mysqli_real_escape_string($dbopen,$rcs_1['PIPELINE_DUMMY_ID']);
-        $PIPELINE_DUMMY_IS_EARLY_WSC = mysqli_real_escape_string($dbopen,$rcs_1['PIPELINE_DUMMY_IS_EARLY_WSC']);
-        $FINAL_DT = mysqli_real_escape_string($dbopen,$rcs_1['FINAL_DT']);
+        $IS_SELECTED = $rcs_1['IS_SELECTED'];
+        $PIPELINE_DUMMY_ID = $rcs_1['PIPELINE_DUMMY_ID'];
+        $PIPELINE_DUMMY_IS_EARLY_WSC = $rcs_1['PIPELINE_DUMMY_IS_EARLY_WSC'];
+        $FINAL_DT = $rcs_1['FINAL_DT'];
 
-        $SPOUSE_PHONE = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_PHONE']);
-        $SPOUSE_MOBILE_PHONE_NO = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_MOBILE_PHONE_NO']);
-        $GUARANTOR_ID_NO = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_ID_NO']);
-        $GUARANTOR_NAME = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_NAME']);
-        $GUARANTOR_MOBILE_PHONE_NO = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_MOBILE_PHONE_NO']);
-        $GUARANTOR_BIRTH_PLACE = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_BIRTH_PLACE']);
-        $GUARANTOR_BIRTH_DT = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_BIRTH_DT']);
-        $GUARANTOR_ADDR = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_ADDR']);
-        $GUARANTOR_RT = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_RT']);
-        $GUARANTOR_RW = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_RW']);
-        $GUARANTOR_KELURAHAN = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_KELURAHAN']);
-        $GUARANTOR_KECAMATAN = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_KECAMATAN']);
-        $GUARANTOR_CITY = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_CITY']);
-        $GUARANTOR_PROVINSI = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_PROVINSI']);
-        $GUARANTOR_ZIPCODE = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_ZIPCODE']);
-        $GUARANTOR_SUBZIPCODE = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_SUBZIPCODE']);
-        $GUARANTOR_RELATIONSHIP = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_RELATIONSHIP']);
-        $SPOUSE_CUST_ID = mysqli_real_escape_string($dbopen,$rcs_1['SPOUSE_CUST_ID']);
-        $GUARANTOR_CUST_ID = mysqli_real_escape_string($dbopen,$rcs_1['GUARANTOR_CUST_ID']);
-        $IS_PRE_APPROVAL = mysqli_real_escape_string($dbopen,$rcs_1['IS_PRE_APPROVAL']);
+        $SPOUSE_PHONE = $rcs_1['SPOUSE_PHONE'];
+        $SPOUSE_MOBILE_PHONE_NO = $rcs_1['SPOUSE_MOBILE_PHONE_NO'];
+        $GUARANTOR_ID_NO = $rcs_1['GUARANTOR_ID_NO'];
+        $GUARANTOR_NAME = $rcs_1['GUARANTOR_NAME'];
+        $GUARANTOR_MOBILE_PHONE_NO = $rcs_1['GUARANTOR_MOBILE_PHONE_NO'];
+        $GUARANTOR_BIRTH_PLACE = $rcs_1['GUARANTOR_BIRTH_PLACE'];
+        $GUARANTOR_BIRTH_DT = $rcs_1['GUARANTOR_BIRTH_DT'];
+        $GUARANTOR_ADDR = $rcs_1['GUARANTOR_ADDR'];
+        $GUARANTOR_RT = $rcs_1['GUARANTOR_RT'];
+        $GUARANTOR_RW = $rcs_1['GUARANTOR_RW'];
+        $GUARANTOR_KELURAHAN = $rcs_1['GUARANTOR_KELURAHAN'];
+        $GUARANTOR_KECAMATAN = $rcs_1['GUARANTOR_KECAMATAN'];
+        $GUARANTOR_CITY = $rcs_1['GUARANTOR_CITY'];
+        $GUARANTOR_PROVINSI = $rcs_1['GUARANTOR_PROVINSI'];
+        $GUARANTOR_ZIPCODE = $rcs_1['GUARANTOR_ZIPCODE'];
+        $GUARANTOR_SUBZIPCODE = $rcs_1['GUARANTOR_SUBZIPCODE'];
+        $GUARANTOR_RELATIONSHIP = $rcs_1['GUARANTOR_RELATIONSHIP'];
+        $SPOUSE_CUST_ID = $rcs_1['SPOUSE_CUST_ID'];
+        $GUARANTOR_CUST_ID = $rcs_1['GUARANTOR_CUST_ID'];
+        $IS_PRE_APPROVAL = $rcs_1['IS_PRE_APPROVAL'];
 
-        $sql_in = "INSERT INTO cc_ts_penawaran_job SET
+        $stmt = $dbopen->prepare("INSERT INTO cc_ts_penawaran_job SET
                         campaign_id = '0', 
                         AGRMNT_ID = '$AGRMNT_ID', 
                         AGRMNT_NO = '$AGRMNT_NO', 
@@ -629,8 +643,8 @@ $mss_1 = "select A.*
                         is_eligible_crm = '1',
                         is_process = '1', 
                         IS_PRE_APPROVAL = '$IS_PRE_APPROVAL', 
-                        SYNC_TIME=now()";
-        if($resin =  mysqli_query($dbopen,$sql_in)){
+                        SYNC_TIME=now()");
+        if($resin =  $stmt->execute()){
             $idcus = mysqli_insert_id($dbopen);
 
             $suc1++;
@@ -645,11 +659,17 @@ $mss_1 = "select A.*
             }
             
         }
+        $stmt->close();
 
     }
+    
+} catch (\PDOException $e) {
+    // Penanganan error
+    error_log("Query database gagal: " . $e->getMessage());
+}
 
 
-    $err_desc = mysqli_real_escape_string($dbopen,$err_desc);
+    $err_desc = $err_desc;
     $sqllog = "INSERT INTO cc_log_sync_data SET 
                   sync_desc       ='V_MKT_POLO_ELIGIBLE',
                   sync_success    ='$suc1',
@@ -658,7 +678,9 @@ $mss_1 = "select A.*
                   sync_error_desc ='$err_desc',
                   exe_time        = '$dateexe',
                   sync_time       =now()";
-    mysqli_query($dbopen,$sqllog);
+    $stmt = $dbopen->prepare($sqllog);
+    $reslog = $stmt->execute();
+    $stmt->close();
 
 $suc2=0;
 $err2=0;
@@ -670,7 +692,9 @@ $sqlcg = "SELECT
           WHERE a.campaign_priority > 0 AND status=1 
           AND POSITION('WISE' IN a.data_source) > 0
           ORDER BY a.campaign_priority ASC ";
-$rescg = mysqli_query($dbopen,$sqlcg);
+$stmt = $dbopen->prepare($sqlcg);
+$rescg = $stmt->execute();
+$stmt->close();
 while($reccg = mysqli_fetch_array($rescg)){
     $idcc                               = $reccg['id'];
     $data_source                        = $reccg['data_source'];
@@ -725,7 +749,9 @@ while($reccg = mysqli_fetch_array($rescg)){
                   campaign_id       ='$idcc',
                   `desc`            ='puteran campaign',
                   insert_time       =now()";
-    mysqli_query($dbopen,$sqllog);
+    $stmt = $dbopen->prepare($sqllog);
+    $reslog = $stmt->execute();
+    $stmt->close();
     
     $sql_whr="";
     if ($data_source!="" && $data_source!="0") {
@@ -778,7 +804,9 @@ while($reccg = mysqli_fetch_array($rescg)){
           FROM 
           cc_master_house_ownership a 
           WHERE a.descr IN ('$kepemilikan_rumah')";
-        $resch = mysqli_query($dbopen,$sqlch);
+        $stmt = $dbopen->prepare($sqlch);
+        $resch = $stmt->execute();
+        $stmt->close();
         while($recch = mysqli_fetch_array($resch)){
             $master_code = $recch['master_code'];
             $descr = $recch['descr'];
@@ -880,7 +908,9 @@ while($reccg = mysqli_fetch_array($rescg)){
                 cc_ts_penawaran_job a 
               WHERE campaign_id='0' $sql_whr ";
               
-    $rescektoday = mysqli_query($dbopen,$sqlcektoday);
+    $stmt = $dbopen->prepare($sqlcektoday);
+    $rescektoday = $stmt->execute();
+    $stmt->close();
     if($reccektoday = mysqli_fetch_array($rescektoday)){
         $id_today_upd  = $reccektoday['id']; 
 
@@ -888,18 +918,22 @@ while($reccg = mysqli_fetch_array($rescg)){
                       campaign_id       ='$idcc',
                       `desc`            ='puteran consumer_detail',
                       insert_time       =now()";
-        mysqli_query($dbopen,$sqllog);
+        $stmt = $dbopen->prepare($sqllog);
+        $reslog = $stmt->execute();
+        $stmt->close();
 
         $sqlupdt = "";
 
         $sqltodayupdt = "UPDATE cc_ts_penawaran_job
                          SET $sqlupdt campaign_id = '$idcc'
                          WHERE campaign_id='0' $sql_whr ";
-        if($restodayupdt =  mysqli_query($dbopen,$sqltodayupdt)){ 
+        $stmt =  $dbopen->prepare($sqltodayupdt)
+        if($reslog = $stmt->execute()){ 
            $suc2++;
         }else{
            $err2++;
         }
+        $stmt->close();
 
     }
     mysqli_free_result($rescektoday);
@@ -909,7 +943,9 @@ while($reccg = mysqli_fetch_array($rescg)){
 
     $sqljob = "SELECT * FROM cc_ts_penawaran_job
               WHERE campaign_id='0' AND SOURCE_DATA = 'WISE'";
-    $resjob = mysqli_query($dbopen,$sqljob);
+    $stmt = $dbopen->prepare($sqljob);
+    $resjob = $stmt->execute();
+    $stmt->close();
     while($recjob = mysqli_fetch_array($resjob)){
         @extract($recjob,EXTR_OVERWRITE);
 
@@ -1293,12 +1329,16 @@ while($reccg = mysqli_fetch_array($rescg)){
                         is_process = '1', 
                         is_assign  = '0', 
                         SYNC_TIME=now()";
-        $resin2 =  mysqli_query($dbopen,$sql_in2);
+        $stmt =  $dbopen->prepare($sql_in2);
+        $resin2 = $stmt->execute();
+        $stmt->close();
     }
 
             $sqldelete = "DELETE FROM cc_ts_penawaran_job  
                              WHERE campaign_id='0' AND SOURCE_DATA = 'WISE'"; 
-            $resdelete =  mysqli_query($dbopen,$sqldelete);
+            $stmt =  $dbopen->prepare($sqldelete);
+            $resdelete = $stmt->execute();
+            $stmt->close();
            
 
 disconnectDB($dbopen);
@@ -1306,8 +1346,5 @@ disconnectDB($dbopen);
 
 mssql_close($con);
 
-echo "Sync Data POLO_ELIGIBLE V_MKT_POLO_ELIGIBLE LEFT JOIN T_MKT_POLO_ORDER_IN_Y OK <br><br><br>";
-
-echo "Sync Process Done <br>";
 
 ?>
