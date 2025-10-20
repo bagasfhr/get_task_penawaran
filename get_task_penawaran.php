@@ -16,7 +16,9 @@ try {
     $pdo = new PDO($dsn, $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Koneksi database gagal: " . $e->getMessage());
+    error_log("Koneksi database gagal (FILE: " . __FILE__ . " LINE: " . __LINE__ . "): " . $e->getMessage());
+    http_response_code(500);
+    exit("Terjadi kesalahan sistem. Mohon coba lagi nanti.");
 }
 
 
@@ -77,7 +79,7 @@ $mss_1 = "select A.*
 try {
     $stmt = $pdo->query($sql);
     
-    while ($rcs_1 = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    while (($rcs_1 = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
 
         $AGRMNT_ID = $rcs_1['AGRMNT_ID']; 
         $AGRMNT_NO = $rcs_1['AGRMNT_NO']; 
