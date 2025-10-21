@@ -13,12 +13,20 @@ $password = $mssql_pass;
 $dsn = "sqlsrv:Server=$server;Database=WISE_STAGING";
 
 try {
-    $pdo = new PDO($dsn, $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
+    $options = [
+        \PDO::ATTR_ERRMODE          => \PDO::ERRMODE_EXCEPTION,
+        \PDO::ATTR_EMULATE_PREPARES => false,
+        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+    ];
+
+    $pdo = new \PDO($dsn, $username, $password, $options);
+
+} catch (\PDOException $e) {
+    
     error_log("Koneksi database gagal (FILE: " . __FILE__ . " LINE: " . __LINE__ . "): " . $e->getMessage());
+
     http_response_code(500);
-    exit("Terjadi kesalahan sistem. Mohon coba lagi nanti.");
+    throw new \Exception("Terjadi kesalahan sistem. Mohon coba lagi nanti", 500);
 }
 
 
@@ -28,37 +36,39 @@ $conf_user          = $mysql_user;
 $conf_passwd        = $mysql_pass;
 $conf_db            = $mysql_db;
 
-function connectDB() {
-    global $conf_ip, $conf_user, $conf_passwd, $conf_db, $pdo; // Tambahkan $pdo ke global
-
+function connectDB($conf_ip, $conf_user, $conf_passwd, $conf_db) {
     $dsn = 'mysql:host=' . $conf_ip . ';dbname=' . $conf_db . ';charset=utf8mb4';
+
     $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, 
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, 
+        PDO::ATTR_EMULATE_PREPARES   => false, 
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4" 
     ];
 
     try {
         $pdo = new PDO($dsn, $conf_user, $conf_passwd, $options);
-        return true;
+        
+        return $pdo; 
+        
     } catch (\PDOException $e) {
-        error_log("Koneksi database gagal: " . $e->getMessage());
-        return false;
+        error_log("FATAL DB CONNECTION ERROR: " . $e->getMessage());
+
+        throw new \Exception("Gagal terhubung ke database. Coba lagi nanti.", (int)$e->getCode());
     }
 }
 
 
 
 function disconnectDB($db_connect) {
-    $db_connect->close(); 
-    unset($db_connect); 
+    $db_connect->close();
+    unset($db_connect);
 }
 
 $dateexe = DATE("Y-m-d H:i:s");
 $dbopen  = connectDB();
 
 
-    //top 100
     $no =1;
     $suc1=0;
     $err1=0;
@@ -81,164 +91,164 @@ try {
     
     while (($rcs_1 = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
 
-        $AGRMNT_ID = $rcs_1['AGRMNT_ID']; 
-        $AGRMNT_NO = $rcs_1['AGRMNT_NO']; 
-        $AGRMNT_DT = $rcs_1['AGRMNT_DT']; 
-        $PIPELINE_ID = $rcs_1['PIPELINE_ID']; 
-        $JOB_ID = $rcs_1['JOB_ID']; 
-        $IS_ACTIVE = $rcs_1['IS_ACTIVE']; 
-        $DISTRIBUTED_DT = $rcs_1['DISTRIBUTED_DT']; 
-        $DISTRIBUTED_USR = $rcs_1['DISTRIBUTED_USR']; 
-        $IS_COMPLETE = $rcs_1['IS_COMPLETE']; 
-        $COMPLETED_DT = $rcs_1['COMPLETED_DT']; 
-        $CAE_FINAL_SCORE = $rcs_1['CAE_FINAL_SCORE']; 
-        $CAE_FINAL_RESULT = $rcs_1['CAE_FINAL_RESULT']; 
-        $CAE_RESULT = $rcs_1['CAE_RESULT']; 
-        $CAE_DT = $rcs_1['CAE_DT']; 
-        $DUKCAPIL = $rcs_1['DUKCAPIL']; 
-        $DUKCAPIL_RESULT = $rcs_1['DUKCAPIL_RESULT']; 
-        $DUKCAPIL_API_DT = $rcs_1['DUKCAPIL_API_DT']; 
-        $SCHEME_ID = $rcs_1['SCHEME_ID']; 
-        $SLIK_CBASID = $rcs_1['SLIK_CBASID']; 
-        $SLIK_RESULT = $rcs_1['SLIK_RESULT']; 
-        $SLIK_CATEGORY = $rcs_1['SLIK_CATEGORY']; 
-        $SLIK_API_DT = $rcs_1['SLIK_API_DT']; 
-        $SOURCE_DATA = $rcs_1['SOURCE_DATA']; 
-        $KILAT_PINTAR = $rcs_1['KILAT_PINTAR']; 
-        $BUSINESS_DATE = $rcs_1['BUSINESS_DATE']; 
-        $OFFICE_REGION_CODE = $rcs_1['OFFICE_REGION_CODE']; 
-        $OFFICE_REGION_NAME = $rcs_1['OFFICE_REGION_NAME']; 
-        $OFFICE_CODE = $rcs_1['OFFICE_CODE']; 
-        $OFFICE_NAME = $rcs_1['OFFICE_NAME']; 
-        $CAB_COLL = $rcs_1['CAB_COLL']; 
-        $CAB_COLL_NAME = $rcs_1['CAB_COLL_NAME']; 
-        $KAPOS_NAME = $rcs_1['KAPOS_NAME']; 
-        $PROD_OFFERING_CODE = $rcs_1['PROD_OFFERING_CODE']; 
-        $LOB_CODE = $rcs_1['LOB_CODE']; 
-        $CUST_TYPE = $rcs_1['CUST_TYPE']; 
-        $CUST_NO = $rcs_1['CUST_NO']; 
-        $CUST_NAME = $rcs_1['CUST_NAME']; 
-        $ID_NO = $rcs_1['ID_NO']; 
-        $GENDER = $rcs_1['GENDER']; 
-        $RELIGION = $rcs_1['RELIGION']; 
-        $BIRTH_PLACE = $rcs_1['BIRTH_PLACE']; 
-        $BIRTH_DT = $rcs_1['BIRTH_DT']; 
+        $AGRMNT_ID = $rcs_1['AGRMNT_ID'];
+        $AGRMNT_NO = $rcs_1['AGRMNT_NO'];
+        $AGRMNT_DT = $rcs_1['AGRMNT_DT'];
+        $PIPELINE_ID = $rcs_1['PIPELINE_ID'];
+        $JOB_ID = $rcs_1['JOB_ID'];
+        $IS_ACTIVE = $rcs_1['IS_ACTIVE'];
+        $DISTRIBUTED_DT = $rcs_1['DISTRIBUTED_DT'];
+        $DISTRIBUTED_USR = $rcs_1['DISTRIBUTED_USR'];
+        $IS_COMPLETE = $rcs_1['IS_COMPLETE'];
+        $COMPLETED_DT = $rcs_1['COMPLETED_DT'];
+        $CAE_FINAL_SCORE = $rcs_1['CAE_FINAL_SCORE'];
+        $CAE_FINAL_RESULT = $rcs_1['CAE_FINAL_RESULT'];
+        $CAE_RESULT = $rcs_1['CAE_RESULT'];
+        $CAE_DT = $rcs_1['CAE_DT'];
+        $DUKCAPIL = $rcs_1['DUKCAPIL'];
+        $DUKCAPIL_RESULT = $rcs_1['DUKCAPIL_RESULT'];
+        $DUKCAPIL_API_DT = $rcs_1['DUKCAPIL_API_DT'];
+        $SCHEME_ID = $rcs_1['SCHEME_ID'];
+        $SLIK_CBASID = $rcs_1['SLIK_CBASID'];
+        $SLIK_RESULT = $rcs_1['SLIK_RESULT'];
+        $SLIK_CATEGORY = $rcs_1['SLIK_CATEGORY'];
+        $SLIK_API_DT = $rcs_1['SLIK_API_DT'];
+        $SOURCE_DATA = $rcs_1['SOURCE_DATA'];
+        $KILAT_PINTAR = $rcs_1['KILAT_PINTAR'];
+        $BUSINESS_DATE = $rcs_1['BUSINESS_DATE'];
+        $OFFICE_REGION_CODE = $rcs_1['OFFICE_REGION_CODE'];
+        $OFFICE_REGION_NAME = $rcs_1['OFFICE_REGION_NAME'];
+        $OFFICE_CODE = $rcs_1['OFFICE_CODE'];
+        $OFFICE_NAME = $rcs_1['OFFICE_NAME'];
+        $CAB_COLL = $rcs_1['CAB_COLL'];
+        $CAB_COLL_NAME = $rcs_1['CAB_COLL_NAME'];
+        $KAPOS_NAME = $rcs_1['KAPOS_NAME'];
+        $PROD_OFFERING_CODE = $rcs_1['PROD_OFFERING_CODE'];
+        $LOB_CODE = $rcs_1['LOB_CODE'];
+        $CUST_TYPE = $rcs_1['CUST_TYPE'];
+        $CUST_NO = $rcs_1['CUST_NO'];
+        $CUST_NAME = $rcs_1['CUST_NAME'];
+        $ID_NO = $rcs_1['ID_NO'];
+        $GENDER = $rcs_1['GENDER'];
+        $RELIGION = $rcs_1['RELIGION'];
+        $BIRTH_PLACE = $rcs_1['BIRTH_PLACE'];
+        $BIRTH_DT = $rcs_1['BIRTH_DT'];
         $BIRTH_DT = date("Y-m-d h:i:s", strtotime($BIRTH_DT));
-        $SPOUSE_ID_NO = $rcs_1['SPOUSE_ID_NO']; 
-        $SPOUSE_NAME = $rcs_1['SPOUSE_NAME']; 
-        $SPOUSE_BIRTH_DT = $rcs_1['SPOUSE_BIRTH_DT']; 
-        $ADDR_LEG = $rcs_1['ADDR_LEG']; 
-        $RT_LEG = $rcs_1['RT_LEG']; 
-        $RW_LEG = $rcs_1['RW_LEG']; 
-        $PROVINSI_LEG = $rcs_1['PROVINSI_LEG']; 
-        $CITY_LEG = $rcs_1['CITY_LEG']; 
-        $KABUPATEN_LEG = $rcs_1['KABUPATEN_LEG']; 
-        $KECAMATAN_LEG = $rcs_1['KECAMATAN_LEG']; 
-        $KELURAHAN_LEG = $rcs_1['KELURAHAN_LEG']; 
-        $ZIPCODE_LEG = $rcs_1['ZIPCODE_LEG']; 
-        $SUB_ZIPCODE_LEG = $rcs_1['SUB_ZIPCODE_LEG']; 
-        $ADDR_RES = $rcs_1['ADDR_RES']; 
-        $RT_RES = $rcs_1['RT_RES']; 
-        $RW_RES = $rcs_1['RW_RES']; 
-        $PROVINSI_RES = $rcs_1['PROVINSI_RES']; 
-        $CITY_RES = $rcs_1['CITY_RES']; 
-        $KABUPATEN_RES = $rcs_1['KABUPATEN_RES']; 
-        $KECAMATAN_RES = $rcs_1['KECAMATAN_RES']; 
-        $KELURAHAN_RES = $rcs_1['KELURAHAN_RES']; 
-        $ZIPCODE_RES = $rcs_1['ZIPCODE_RES']; 
-        $SUB_ZIPCODE_RES = $rcs_1['SUB_ZIPCODE_RES']; 
-        $MOBILE1 = $rcs_1['MOBILE1']; 
-        $MOBILE2 = $rcs_1['MOBILE2']; 
-        $PHONE1 = $rcs_1['PHONE1']; 
-        $PHONE2 = $rcs_1['PHONE2']; 
-        $OFFICE_PHONE1 = $rcs_1['OFFICE_PHONE1']; 
-        $OFFICE_PHONE2 = $rcs_1['OFFICE_PHONE2']; 
-        $PROFESSION_CODE = $rcs_1['PROFESSION_CODE']; 
-        $PROFESSION_NAME = $rcs_1['PROFESSION_NAME']; 
-        $PROFESSION_CATEGORY_CODE = $rcs_1['PROFESSION_CATEGORY_CODE']; 
-        $PROFESSION_CATEGORY_NAME = $rcs_1['PROFESSION_CATEGORY_NAME']; 
-        $JOB_POSITION = $rcs_1['JOB_POSITION']; 
-        $JOB_STATUS = $rcs_1['JOB_STATUS']; 
-        $INDUSTRY_TYPE_NAME = $rcs_1['INDUSTRY_TYPE_NAME']; 
-        $OTHER_BIZ_NAME = $rcs_1['OTHER_BIZ_NAME']; 
-        $MONTHLY_INCOME = $rcs_1['MONTHLY_INCOME']; 
-        $MONTHLY_EXPENSE = $rcs_1['MONTHLY_EXPENSE']; 
-        $MONTHLY_INSTALLMENT = $rcs_1['MONTHLY_INSTALLMENT']; 
-        $DOWNPAYMENT = $rcs_1['DOWNPAYMENT']; 
-        $PERCENT_DP = $rcs_1['PERCENT_DP']; 
-        $PLAFOND = $rcs_1['PLAFOND']; 
-        $CUST_RATING = $rcs_1['CUST_RATING']; 
-        $SUPPL_NAME = $rcs_1['SUPPL_NAME']; 
-        $SUPPL_CODE = $rcs_1['SUPPL_CODE']; 
-        $MACHINE_NO = $rcs_1['MACHINE_NO']; 
-        $CHASSIS_NO = $rcs_1['CHASSIS_NO']; 
-        $PRODUCT_CATEGORY = $rcs_1['PRODUCT_CATEGORY']; 
-        $ASSET_CATEGORY_CODE = $rcs_1['ASSET_CATEGORY_CODE']; 
-        $ASSET_TYPE = $rcs_1['ASSET_TYPE']; 
-        $ITEM_BRAND = $rcs_1['ITEM_BRAND']; 
-        $ITEM_TYPE = $rcs_1['ITEM_TYPE']; 
-        $ITEM_DESCRIPTION = $rcs_1['ITEM_DESCRIPTION']; 
-        $ASSET_MODEL = $rcs_1['ASSET_MODEL']; 
-        $OTR_PRICE = $rcs_1['OTR_PRICE']; 
-        $ITEM_YEAR = $rcs_1['ITEM_YEAR']; 
-        $OWNER_RELATIONSHIP = $rcs_1['OWNER_RELATIONSHIP']; 
-        $BPKB_OWNERSHIP = $rcs_1['BPKB_OWNERSHIP']; 
-        $AGRMNT_RATING = $rcs_1['AGRMNT_RATING']; 
-        $CONTRACT_STAT = $rcs_1['CONTRACT_STAT']; 
-        $INST_PAYED = $rcs_1['INST_PAYED']; 
-        $NEXT_INST_NUM = $rcs_1['NEXT_INST_NUM']; 
-        $NEXT_INST_DT = $rcs_1['NEXT_INST_DT']; 
-        $OS_TENOR = $rcs_1['OS_TENOR']; 
-        $TENOR = $rcs_1['TENOR']; 
-        $RELEASE_DATE_BPKB = $rcs_1['RELEASE_DATE_BPKB']; 
-        $MATURITY_DT = $rcs_1['MATURITY_DT']; 
-        $MATURITY_DURATION = $rcs_1['MATURITY_DURATION']; 
-        $GO_LIVE_DT = $rcs_1['GO_LIVE_DT']; 
-        $GO_LIVE_DURATION = $rcs_1['GO_LIVE_DURATION']; 
-        $AAM_RRD_DT = $rcs_1['AAM_RRD_DT']; 
-        $EXPIRED_MONTHS = $rcs_1['EXPIRED_MONTHS']; 
-        $OS_PRINCIPAL = $rcs_1['OS_PRINCIPAL']; 
-        $OS_PRINCIPAL_AMT = $rcs_1['OS_PRINCIPAL_AMT']; 
-        $OS_INTEREST_AMT = $rcs_1['OS_INTEREST_AMT']; 
-        $AGING_PEMBIAYAAN = $rcs_1['AGING_PEMBIAYAAN']; 
-        $JUMLAH_KONTRAK_PERCUST = $rcs_1['JUMLAH_KONTRAK_PERCUST']; 
-        $ESTIMASI_TERIMA_BERSIH = $rcs_1['ESTIMASI_TERIMA_BERSIH']; 
-        $STARTED_DT = $rcs_1['STARTED_DT']; 
-        $POS_DEALER = $rcs_1['POS_DEALER']; 
-        $SALES_DEALER_ID = $rcs_1['SALES_DEALER_ID']; 
-        $SALES_DEALER = $rcs_1['SALES_DEALER']; 
-        $DTM_CRT = $rcs_1['DTM_CRT']; 
-        $USR_CRT = $rcs_1['USR_CRT']; 
-        $DTM_UPD = $rcs_1['DTM_UPD']; 
-        $USR_UPD = $rcs_1['USR_UPD']; 
-        $COLL_AGRMNT_ID = $rcs_1['COLL_AGRMNT_ID']; 
-        $AGRMNT_ASSET_ID = $rcs_1['AGRMNT_ASSET_ID']; 
-        $ASSET_MASTER_ID = $rcs_1['ASSET_MASTER_ID']; 
-        $DEFAULT_STAT = $rcs_1['DEFAULT_STAT']; 
-        $CUST_ID = $rcs_1['CUST_ID']; 
-        $HOME_STAT = $rcs_1['HOME_STAT']; 
-        $MOTHER_NAME = $rcs_1['MOTHER_NAME']; 
-        $IS_EVER_REPO = $rcs_1['IS_EVER_REPO']; 
-        $IS_REPO = $rcs_1['IS_REPO']; 
-        $IS_WRITE_OFF = $rcs_1['IS_WRITE_OFF']; 
-        $IS_RESTRUKTUR = $rcs_1['IS_RESTRUKTUR']; 
-        $IS_INSURANCE = $rcs_1['IS_INSURANCE']; 
-        $IS_NEGATIVE_CUST = $rcs_1['IS_NEGATIVE_CUST']; 
-        $IS_ACCOUNT_BAM = $rcs_1['IS_ACCOUNT_BAM']; 
-        $CUST_EXPOSURE = $rcs_1['CUST_EXPOSURE']; 
-        $AGE = $rcs_1['AGE']; 
-        $ASSET_AGE = $rcs_1['ASSET_AGE']; 
-        $SAME_ASSET_GO_LIVE = $rcs_1['SAME_ASSET_GO_LIVE']; 
-        $LTV = $rcs_1['LTV']; 
-        $DSR = $rcs_1['DSR']; 
-        $MARITAL_STAT = $rcs_1['MARITAL_STAT']; 
-        $EDUCATION = $rcs_1['EDUCATION']; 
-        $EMPLOYMENT_ESTABLISHMENT_DT = $rcs_1['EMPLOYMENT_ESTABLISHMENT_DT']; 
-        $LENGTH_OF_WORK = $rcs_1['LENGTH_OF_WORK']; 
-        $HOUSE_STAY_LENGTH = $rcs_1['HOUSE_STAY_LENGTH']; 
-        $LAST_OVERDUE = $rcs_1['LAST_OVERDUE']; 
-        $MAX_OVERDUE = $rcs_1['MAX_OVERDUE']; 
-        $MAX_OVERDUE_LAST_X_MONTHS = $rcs_1['MAX_OVERDUE_LAST_X_MONTHS']; 
+        $SPOUSE_ID_NO = $rcs_1['SPOUSE_ID_NO'];
+        $SPOUSE_NAME = $rcs_1['SPOUSE_NAME'];
+        $SPOUSE_BIRTH_DT = $rcs_1['SPOUSE_BIRTH_DT'];
+        $ADDR_LEG = $rcs_1['ADDR_LEG'];
+        $RT_LEG = $rcs_1['RT_LEG'];
+        $RW_LEG = $rcs_1['RW_LEG'];
+        $PROVINSI_LEG = $rcs_1['PROVINSI_LEG'];
+        $CITY_LEG = $rcs_1['CITY_LEG'];
+        $KABUPATEN_LEG = $rcs_1['KABUPATEN_LEG'];
+        $KECAMATAN_LEG = $rcs_1['KECAMATAN_LEG'];
+        $KELURAHAN_LEG = $rcs_1['KELURAHAN_LEG'];
+        $ZIPCODE_LEG = $rcs_1['ZIPCODE_LEG'];
+        $SUB_ZIPCODE_LEG = $rcs_1['SUB_ZIPCODE_LEG'];
+        $ADDR_RES = $rcs_1['ADDR_RES'];
+        $RT_RES = $rcs_1['RT_RES'];
+        $RW_RES = $rcs_1['RW_RES'];
+        $PROVINSI_RES = $rcs_1['PROVINSI_RES'];
+        $CITY_RES = $rcs_1['CITY_RES'];
+        $KABUPATEN_RES = $rcs_1['KABUPATEN_RES'];
+        $KECAMATAN_RES = $rcs_1['KECAMATAN_RES'];
+        $KELURAHAN_RES = $rcs_1['KELURAHAN_RES'];
+        $ZIPCODE_RES = $rcs_1['ZIPCODE_RES'];
+        $SUB_ZIPCODE_RES = $rcs_1['SUB_ZIPCODE_RES'];
+        $MOBILE1 = $rcs_1['MOBILE1'];
+        $MOBILE2 = $rcs_1['MOBILE2'];
+        $PHONE1 = $rcs_1['PHONE1'];
+        $PHONE2 = $rcs_1['PHONE2'];
+        $OFFICE_PHONE1 = $rcs_1['OFFICE_PHONE1'];
+        $OFFICE_PHONE2 = $rcs_1['OFFICE_PHONE2'];
+        $PROFESSION_CODE = $rcs_1['PROFESSION_CODE'];
+        $PROFESSION_NAME = $rcs_1['PROFESSION_NAME'];
+        $PROFESSION_CATEGORY_CODE = $rcs_1['PROFESSION_CATEGORY_CODE'];
+        $PROFESSION_CATEGORY_NAME = $rcs_1['PROFESSION_CATEGORY_NAME'];
+        $JOB_POSITION = $rcs_1['JOB_POSITION'];
+        $JOB_STATUS = $rcs_1['JOB_STATUS'];
+        $INDUSTRY_TYPE_NAME = $rcs_1['INDUSTRY_TYPE_NAME'];
+        $OTHER_BIZ_NAME = $rcs_1['OTHER_BIZ_NAME'];
+        $MONTHLY_INCOME = $rcs_1['MONTHLY_INCOME'];
+        $MONTHLY_EXPENSE = $rcs_1['MONTHLY_EXPENSE'];
+        $MONTHLY_INSTALLMENT = $rcs_1['MONTHLY_INSTALLMENT'];
+        $DOWNPAYMENT = $rcs_1['DOWNPAYMENT'];
+        $PERCENT_DP = $rcs_1['PERCENT_DP'];
+        $PLAFOND = $rcs_1['PLAFOND'];
+        $CUST_RATING = $rcs_1['CUST_RATING'];
+        $SUPPL_NAME = $rcs_1['SUPPL_NAME'];
+        $SUPPL_CODE = $rcs_1['SUPPL_CODE'];
+        $MACHINE_NO = $rcs_1['MACHINE_NO'];
+        $CHASSIS_NO = $rcs_1['CHASSIS_NO'];
+        $PRODUCT_CATEGORY = $rcs_1['PRODUCT_CATEGORY'];
+        $ASSET_CATEGORY_CODE = $rcs_1['ASSET_CATEGORY_CODE'];
+        $ASSET_TYPE = $rcs_1['ASSET_TYPE'];
+        $ITEM_BRAND = $rcs_1['ITEM_BRAND'];
+        $ITEM_TYPE = $rcs_1['ITEM_TYPE'];
+        $ITEM_DESCRIPTION = $rcs_1['ITEM_DESCRIPTION'];
+        $ASSET_MODEL = $rcs_1['ASSET_MODEL'];
+        $OTR_PRICE = $rcs_1['OTR_PRICE'];
+        $ITEM_YEAR = $rcs_1['ITEM_YEAR'];
+        $OWNER_RELATIONSHIP = $rcs_1['OWNER_RELATIONSHIP'];
+        $BPKB_OWNERSHIP = $rcs_1['BPKB_OWNERSHIP'];
+        $AGRMNT_RATING = $rcs_1['AGRMNT_RATING'];
+        $CONTRACT_STAT = $rcs_1['CONTRACT_STAT'];
+        $INST_PAYED = $rcs_1['INST_PAYED'];
+        $NEXT_INST_NUM = $rcs_1['NEXT_INST_NUM'];
+        $NEXT_INST_DT = $rcs_1['NEXT_INST_DT'];
+        $OS_TENOR = $rcs_1['OS_TENOR'];
+        $TENOR = $rcs_1['TENOR'];
+        $RELEASE_DATE_BPKB = $rcs_1['RELEASE_DATE_BPKB'];
+        $MATURITY_DT = $rcs_1['MATURITY_DT'];
+        $MATURITY_DURATION = $rcs_1['MATURITY_DURATION'];
+        $GO_LIVE_DT = $rcs_1['GO_LIVE_DT'];
+        $GO_LIVE_DURATION = $rcs_1['GO_LIVE_DURATION'];
+        $AAM_RRD_DT = $rcs_1['AAM_RRD_DT'];
+        $EXPIRED_MONTHS = $rcs_1['EXPIRED_MONTHS'];
+        $OS_PRINCIPAL = $rcs_1['OS_PRINCIPAL'];
+        $OS_PRINCIPAL_AMT = $rcs_1['OS_PRINCIPAL_AMT'];
+        $OS_INTEREST_AMT = $rcs_1['OS_INTEREST_AMT'];
+        $AGING_PEMBIAYAAN = $rcs_1['AGING_PEMBIAYAAN'];
+        $JUMLAH_KONTRAK_PERCUST = $rcs_1['JUMLAH_KONTRAK_PERCUST'];
+        $ESTIMASI_TERIMA_BERSIH = $rcs_1['ESTIMASI_TERIMA_BERSIH'];
+        $STARTED_DT = $rcs_1['STARTED_DT'];
+        $POS_DEALER = $rcs_1['POS_DEALER'];
+        $SALES_DEALER_ID = $rcs_1['SALES_DEALER_ID'];
+        $SALES_DEALER = $rcs_1['SALES_DEALER'];
+        $DTM_CRT = $rcs_1['DTM_CRT'];
+        $USR_CRT = $rcs_1['USR_CRT'];
+        $DTM_UPD = $rcs_1['DTM_UPD'];
+        $USR_UPD = $rcs_1['USR_UPD'];
+        $COLL_AGRMNT_ID = $rcs_1['COLL_AGRMNT_ID'];
+        $AGRMNT_ASSET_ID = $rcs_1['AGRMNT_ASSET_ID'];
+        $ASSET_MASTER_ID = $rcs_1['ASSET_MASTER_ID'];
+        $DEFAULT_STAT = $rcs_1['DEFAULT_STAT'];
+        $CUST_ID = $rcs_1['CUST_ID'];
+        $HOME_STAT = $rcs_1['HOME_STAT'];
+        $MOTHER_NAME = $rcs_1['MOTHER_NAME'];
+        $IS_EVER_REPO = $rcs_1['IS_EVER_REPO'];
+        $IS_REPO = $rcs_1['IS_REPO'];
+        $IS_WRITE_OFF = $rcs_1['IS_WRITE_OFF'];
+        $IS_RESTRUKTUR = $rcs_1['IS_RESTRUKTUR'];
+        $IS_INSURANCE = $rcs_1['IS_INSURANCE'];
+        $IS_NEGATIVE_CUST = $rcs_1['IS_NEGATIVE_CUST'];
+        $IS_ACCOUNT_BAM = $rcs_1['IS_ACCOUNT_BAM'];
+        $CUST_EXPOSURE = $rcs_1['CUST_EXPOSURE'];
+        $AGE = $rcs_1['AGE'];
+        $ASSET_AGE = $rcs_1['ASSET_AGE'];
+        $SAME_ASSET_GO_LIVE = $rcs_1['SAME_ASSET_GO_LIVE'];
+        $LTV = $rcs_1['LTV'];
+        $DSR = $rcs_1['DSR'];
+        $MARITAL_STAT = $rcs_1['MARITAL_STAT'];
+        $EDUCATION = $rcs_1['EDUCATION'];
+        $EMPLOYMENT_ESTABLISHMENT_DT = $rcs_1['EMPLOYMENT_ESTABLISHMENT_DT'];
+        $LENGTH_OF_WORK = $rcs_1['LENGTH_OF_WORK'];
+        $HOUSE_STAY_LENGTH = $rcs_1['HOUSE_STAY_LENGTH'];
+        $LAST_OVERDUE = $rcs_1['LAST_OVERDUE'];
+        $MAX_OVERDUE = $rcs_1['MAX_OVERDUE'];
+        $MAX_OVERDUE_LAST_X_MONTHS = $rcs_1['MAX_OVERDUE_LAST_X_MONTHS'];
         $IS_USED = $rcs_1['IS_USED'];
         $SPOUSE_BIRTH_PLACE = $rcs_1['SPOUSE_BIRTH_PLACE'];
 
@@ -756,7 +766,7 @@ while($reccg = mysqli_fetch_array($rescg)){
     $sql_whr="";
     if ($data_source!="" && $data_source!="0") {
         $data_source = str_replace(",", "','", $data_source);
-        $data_source = str_replace("(POTENSIAL DATA RO)", "", $data_source); 
+        $data_source = str_replace("(POTENSIAL DATA RO)", "", $data_source);
         $sql_whr .=" AND SOURCE_DATA IN ('$data_source')";
     }
     if ($type_asset!="" && $type_asset!="0") {
@@ -912,7 +922,7 @@ while($reccg = mysqli_fetch_array($rescg)){
     $rescektoday = $stmt->execute();
     $stmt->close();
     if($reccektoday = mysqli_fetch_array($rescektoday)){
-        $id_today_upd  = $reccektoday['id']; 
+        $id_today_upd  = $reccektoday['id'];
 
         $sqllog = "INSERT INTO cc_log_service_get SET 
                       campaign_id       ='$idcc',
